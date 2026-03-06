@@ -30,8 +30,8 @@ def analysis_agent(state: Dict[str, Any]) -> Dict[str, Any]:
     Respond with 'YES' if sufficient, otherwise 'NO'.
     """
     
-    response = llm.invoke([SystemMessage(content=prompt)])
-    is_sufficient = "YES" in response.upper()
+    response_msg = llm.invoke([SystemMessage(content=prompt)])
+    is_sufficient = "YES" in response_msg.content.upper()
     
     return {"analysis_sufficient": is_sufficient}
 
@@ -48,8 +48,8 @@ def generation_agent(state: Dict[str, Any]) -> Dict[str, Any]:
     User Query: {query}
     """
     
-    response = llm.invoke([HumanMessage(content=prompt)])
-    return {"response": response}
+    response_msg = llm.invoke([HumanMessage(content=prompt)])
+    return {"response": response_msg.content}
 
 def validation_agent(state: Dict[str, Any]) -> Dict[str, Any]:
     """Validates the quality and accuracy of the generated response."""
@@ -66,5 +66,5 @@ def validation_agent(state: Dict[str, Any]) -> Dict[str, Any]:
     Respond with 'APPROVED' if good, otherwise suggest improvements.
     """
     
-    validation = llm.invoke([SystemMessage(content=prompt)])
-    return {"validation_result": validation}
+    validation_msg = llm.invoke([SystemMessage(content=prompt)])
+    return {"validation_result": validation_msg.content}

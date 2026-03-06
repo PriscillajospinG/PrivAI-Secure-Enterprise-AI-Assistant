@@ -1,9 +1,9 @@
-from langchain_ollama import OllamaLLM, OllamaEmbeddings
+from langchain_ollama import ChatOllama, OllamaEmbeddings
 from app.core.config import settings
 
 def get_llm():
-    """Initialize and return the Ollama LLM."""
-    return OllamaLLM(
+    """Initialize and return the Ollama Chat Model."""
+    return ChatOllama(
         base_url=settings.OLLAMA_BASE_URL,
         model=settings.LLM_MODEL
     )
