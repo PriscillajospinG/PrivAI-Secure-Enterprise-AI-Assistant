@@ -1,22 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Sidebar } from './components/Sidebar';
 
 const App: React.FC = () => {
+  const [activeMode, setActiveMode] = useState('chat');
+
   return (
-    <div style={{
-      backgroundColor: '#020617',
-      color: 'white',
-      height: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontFamily: 'sans-serif'
-    }}>
-      <h1 style={{ fontSize: '3rem', fontWeight: 'bold', marginBottom: '1rem' }}>PrivAI Modern UI</h1>
-      <p style={{ color: '#94a3b8' }}>If you see this, React rendering is working correctly.</p>
-      <div style={{ marginTop: '2rem', padding: '1rem', border: '1px solid #334155', borderRadius: '0.5rem' }}>
-        Status: Rendering Proof of Concept
-      </div>
+    <div className="flex h-screen bg-[#020617] overflow-hidden text-white">
+      <Sidebar activeMode={activeMode} onModeChange={setActiveMode} />
+      <main className="flex-1 flex items-center justify-center p-8">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold mb-4">Sidebar Test</h1>
+          <p className="text-slate-400">Current Mode: {activeMode}</p>
+        </div>
+      </main>
     </div>
   );
 };
