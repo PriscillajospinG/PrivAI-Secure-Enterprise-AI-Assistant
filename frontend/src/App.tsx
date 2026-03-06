@@ -26,10 +26,12 @@ const App: React.FC = () => {
   return (
     <div className="flex h-screen bg-background overflow-hidden">
       <Sidebar activeMode={activeMode} onModeChange={setActiveMode} />
-      <main className="flex-1 overflow-hidden relative flex flex-col pt-8">
-        {/* Background Decorative Element */}
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-[100px] -mr-64 -mt-64" />
-        <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-purple-500/5 rounded-full blur-[80px] -ml-32 -mb-32" />
+      <main className="flex-1 overflow-hidden relative flex flex-col pt-12">
+        {/* Background Decorative Elements - Isolated to prevent scroll shifts */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-[100px] translate-x-1/3 -translate-y-1/3" />
+          <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-purple-500/5 rounded-full blur-[80px] -translate-x-1/3 translate-y-1/3" />
+        </div>
 
         <div className="relative flex-1 overflow-hidden">
           {renderContent()}
