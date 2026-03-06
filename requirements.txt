@@ -3,12 +3,13 @@ uvicorn
 langchain
 langchain-community
 langchain-ollama
-langchain-chroma
+langchain-chroma==0.1.4
+chromadb==0.5.3
 langgraph
 pypdf
 pydantic
 pydantic-settings
 python-multipart
-chromadb
+# chromadb pinned above
 httpx
 pytest

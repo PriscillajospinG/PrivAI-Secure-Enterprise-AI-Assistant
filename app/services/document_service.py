@@ -1,4 +1,5 @@
 import os
+import chromadb
 from typing import List
 from langchain_community.document_loaders import PyPDFLoader, TextLoader, DirectoryLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -35,27 +36,45 @@ def create_vector_store():
     raw_docs = load_documents(settings.DOCS_DIR)
     if not raw_docs:
         print("No documents found in data/docs. Initializing empty vector store.")
+        client = chromadb.PersistentClient(
+            path=settings.CHROMA_DIR,
+            settings=chromadb.Settings(allow_reset=True),
+            tenant="default_tenant",
+            database="default_database"
+        )
         return Chroma(
+            client=client,
             collection_name=settings.COLLECTION_NAME,
-            embedding_function=embeddings,
-            persist_directory=settings.CHROMA_DIR
+            embedding_function=embeddings
         )
         
     chunks = split_documents(raw_docs)
     
+    client = chromadb.PersistentClient(
+        path=settings.CHROMA_DIR,
+        settings=chromadb.Settings(allow_reset=True),
+        tenant="default_tenant",
+        database="default_database"
+    )
     vector_store = Chroma.from_documents(
+        client=client,
         documents=chunks,
         embedding=embeddings,
-        collection_name=settings.COLLECTION_NAME,
-        persist_directory=settings.CHROMA_DIR
+        collection_name=settings.COLLECTION_NAME
     )
     return vector_store
 
 def get_vector_store():
     """Get the existing Chroma vector store."""
     embeddings = get_embeddings()
+    client = chromadb.PersistentClient(
+        path=settings.CHROMA_DIR,
+        settings=chromadb.Settings(allow_reset=True),
+        tenant="default_tenant",
+        database="default_database"
+    )
     return Chroma(
+        client=client,
         collection_name=settings.COLLECTION_NAME,
-        embedding_function=embeddings,
-        persist_directory=settings.CHROMA_DIR
+        embedding_function=embeddings
     )
