@@ -32,10 +32,11 @@ PrivAI is a privacy-first, RAG-based AI assistant designed for secure enterprise
    ```
 
 ## Running the Project
-1. Start the FastAPI backend:
+1. Start the FastAPI backend from the root directory:
    ```bash
-   python app/main.py
+   python -m app.main
    ```
+   *Note: Using `python -m app.main` ensures that absolute imports are resolved correctly.*
 2. Open your browser and navigate to: [http://localhost:8000](http://localhost:8000)
 
 ## Folder Structure
