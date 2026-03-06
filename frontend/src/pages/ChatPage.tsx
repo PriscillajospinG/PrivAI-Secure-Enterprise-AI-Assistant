@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Loader2, Info } from 'lucide-react';
-import { aiService, QueryResponse } from '../services/api.service';
+import { aiService } from '../services/api.service';
+import type { QueryResponse } from '../services/api.service';
 
 interface Message {
     id: string;
@@ -85,14 +86,14 @@ export const ChatPage: React.FC<{ mode: string }> = ({ mode }) => {
                     <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                         <div className={`max-w-[80%] flex gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
                             <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${msg.role === 'user'
-                                    ? 'bg-accent-secondary shadow-lg shadow-purple-500/20'
-                                    : 'bg-glass-bg border border-glass-border'
+                                ? 'bg-accent-secondary shadow-lg shadow-purple-500/20'
+                                : 'bg-glass-bg border border-glass-border'
                                 }`}>
                                 {msg.role === 'user' ? <User size={20} /> : <Bot size={20} className="text-accent-primary" />}
                             </div>
                             <div className={`group relative p-4 rounded-2xl text-[15px] leading-relaxed ${msg.role === 'user'
-                                    ? 'bg-accent-primary text-white'
-                                    : 'bg-glass-bg border border-glass-border text-slate-200'
+                                ? 'bg-accent-primary text-white'
+                                : 'bg-glass-bg border border-glass-border text-slate-200'
                                 }`}>
                                 {msg.isLoading ? (
                                     <div className="flex items-center gap-2 py-1">
