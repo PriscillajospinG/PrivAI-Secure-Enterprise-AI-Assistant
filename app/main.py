@@ -73,8 +73,8 @@ async def query_assistant(request: QueryRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# Serve frontend static files
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
+# Serve frontend static files (Disabled to avoid confusion with new React frontend)
+# app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
 if __name__ == "__main__":
     import uvicorn
