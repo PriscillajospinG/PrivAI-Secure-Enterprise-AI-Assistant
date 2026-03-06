@@ -83,3 +83,44 @@ def validation_agent(state: Dict[str, Any]) -> Dict[str, Any]:
     
     validation_msg = llm.invoke([SystemMessage(content=prompt)])
     return {"validation_result": validation_msg.content}
+
+def summarization_agent(state: Dict[str, Any]) -> Dict[str, Any]:
+    """Generates a concise summary of the provided context."""
+    print("--- SUMMARIZING DOCUMENT ---")
+    context = "\n".join(state["context"])
+    
+    prompt = f"""
+    You are an AI Document Summarizer. Provide a high-quality summary of the following document.
+    
+    Document Content: {context}
+    
+    Include:
+    1. A concise overview (3-5 sentences).
+    2. Key points (bullet list).
+    3. Important highlights or warnings.
+    """
+    
+    response_msg = llm.invoke([SystemMessage(content=prompt)])
+    return {"response": response_msg.content}
+
+def extraction_agent(state: Dict[str, Any]) -> Dict[str, Any]:
+    """Extracts key information from documents (Contracts, Transcripts, etc.)."""
+    task_type = state.get("task_type", "analyze")
+    print(f"--- EXTRACTING INFORMATION ({task_type}) ---")
+    context = "\n".join(state["context"])
+    
+    if task_type == "meeting":
+        instruction = "Extract meeting summary, action items, tasks, and key decisions."
+    else:
+        instruction = "Extract key clauses, risks, obligations, and important terms."
+        
+    prompt = f"""
+    You are an AI Document Analyzer. {instruction}
+    
+    Document Content: {context}
+    
+    Format the output clearly with headers.
+    """
+    
+    response_msg = llm.invoke([SystemMessage(content=prompt)])
+    return {"response": response_msg.content}

@@ -10,8 +10,30 @@ document.addEventListener('DOMContentLoaded', () => {
     const reviewContent = document.getElementById('reviewContent');
     const approveBtn = document.getElementById('approveBtn');
     const rejectBtn = document.getElementById('rejectBtn');
+    const modeTabs = document.querySelectorAll('.tab-btn');
 
     let currentPendingResponse = null;
+    let currentMode = 'chat';
+
+    // Handle Mode Switching
+    modeTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            modeTabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            currentMode = tab.dataset.mode;
+
+            // Update placeholder based on mode
+            if (currentMode === 'summarize') {
+                userInput.placeholder = "Which document should I summarize?";
+            } else if (currentMode === 'analyze') {
+                userInput.placeholder = "Which contract/agreement should I analyze?";
+            } else if (currentMode === 'meeting') {
+                userInput.placeholder = "Analyze which meeting transcript?";
+            } else {
+                userInput.placeholder = "Ask a question about your documents...";
+            }
+        });
+    });
 
     // Handle File Upload
     uploadBtn.addEventListener('click', () => fileInput.click());
@@ -68,13 +90,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/query', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ query })
+                body: JSON.stringify({
+                    query: query,
+                    task_type: currentMode
+                })
             });
 
             if (response.ok) {
                 const result = await response.json();
                 currentPendingResponse = result;
-                
+
                 // Show human approval modal
                 reviewContent.textContent = result.response;
                 approvalModal.classList.remove('hidden');
@@ -112,7 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Auto-resize textarea
-    userInput.addEventListener('input', function() {
+    userInput.addEventListener('input', function () {
         this.style.height = 'auto';
         this.style.height = (this.scrollHeight) + 'px';
     });

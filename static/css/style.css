@@ -89,7 +89,8 @@ body {
     margin-bottom: 1rem;
 }
 
-.primary-btn, .secondary-btn {
+.primary-btn,
+.secondary-btn {
     width: 100%;
     padding: 0.75rem;
     border-radius: 8px;
@@ -182,13 +183,34 @@ body {
     font-size: 1.1rem;
 }
 
-.model-badge {
-    font-size: 0.75rem;
+.mode-tabs {
+    display: flex;
+    gap: 0.5rem;
+    padding: 1rem 2rem;
+    background-color: rgba(2, 6, 23, 0.5);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.tab-btn {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text-secondary);
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.tab-btn:hover {
+    color: var(--text-primary);
     background-color: var(--glass-bg);
-    padding: 0.4rem 0.8rem;
-    border-radius: 20px;
-    color: var(--accent-primary);
-    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.tab-btn.active {
+    background-color: var(--accent-primary);
+    color: white;
 }
 
 .chat-messages {
@@ -248,7 +270,7 @@ body {
     align-items: flex-end;
     padding: 0.75rem 1rem;
     gap: 1rem;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
     transition: border-color 0.3s ease;
 }
 
@@ -309,12 +331,25 @@ body {
     animation: bounce 1.4s infinite ease-in-out both;
 }
 
-.typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
-.typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+.typing-indicator span:nth-child(1) {
+    animation-delay: -0.32s;
+}
+
+.typing-indicator span:nth-child(2) {
+    animation-delay: -0.16s;
+}
 
 @keyframes bounce {
-    0%, 80%, 100% { transform: scale(0); }
-    40% { transform: scale(1.0); }
+
+    0%,
+    80%,
+    100% {
+        transform: scale(0);
+    }
+
+    40% {
+        transform: scale(1.0);
+    }
 }
 
 .hidden {
@@ -381,5 +416,10 @@ body {
     margin-top: 0.5rem;
 }
 
-.status-msg.success { color: var(--online-color); }
-.status-msg.error { color: #f87171; }
+.status-msg.success {
+    color: var(--online-color);
+}
+
+.status-msg.error {
+    color: #f87171;
+}

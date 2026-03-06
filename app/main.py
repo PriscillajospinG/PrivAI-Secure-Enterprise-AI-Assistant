@@ -44,10 +44,11 @@ async def upload_documents(files: list[UploadFile] = File(...)):
 
 @app.post("/query", response_model=QueryResponse)
 async def query_assistant(request: QueryRequest):
-    """Query the RAG pipeline."""
+    """Query the RAG pipeline with routing support for different task types."""
     try:
         # Run the LangGraph workflow
         initial_state = {
+            "task_type": request.task_type,
             "query": request.query,
             "context": [],
             "analysis_sufficient": False,
@@ -66,7 +67,8 @@ async def query_assistant(request: QueryRequest):
             response=result["response"],
             context=result["context"],
             validation=result["validation_result"],
-            approved=result["approved"]
+            approved=result["approved"],
+            task_type=result["task_type"]
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
