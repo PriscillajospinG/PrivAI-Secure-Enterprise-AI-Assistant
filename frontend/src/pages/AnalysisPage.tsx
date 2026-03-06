@@ -4,7 +4,6 @@ import {
     ShieldCheck,
     Users,
     Loader2,
-    ChevronRight,
     Copy,
     Download,
     Terminal
@@ -131,6 +130,9 @@ export const AnalysisPage: React.FC<{ mode: string }> = ({ mode }) => {
                                         placeholder={info.placeholder}
                                         className="w-full bg-background-sidebar border border-glass-border rounded-xl py-3 px-4 text-sm focus:ring-1 focus:ring-accent-primary outline-none text-slate-200"
                                     />
+                                    <p className="text-[10px] text-slate-500 mt-1 pl-1 italic">
+                                        Note: Ensure the document is indexed via "Document Manager" first.
+                                    </p>
                                 </div>
                             </div>
 

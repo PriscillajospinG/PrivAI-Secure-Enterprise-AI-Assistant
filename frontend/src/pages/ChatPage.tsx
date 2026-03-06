@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Loader2, Info } from 'lucide-react';
 import { aiService } from '../services/api.service';
-import type { QueryResponse } from '../services/api.service';
 
 interface Message {
     id: string;
