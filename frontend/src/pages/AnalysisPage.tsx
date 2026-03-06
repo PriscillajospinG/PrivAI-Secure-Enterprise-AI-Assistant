@@ -74,12 +74,32 @@ export const AnalysisPage: React.FC<{ mode: string }> = ({ mode }) => {
         }
     };
 
+    const colorMap = {
+        blue: {
+            bg: 'bg-blue-500/10',
+            border: 'border-blue-500/20',
+            loading: 'border-blue-500'
+        },
+        emerald: {
+            bg: 'bg-emerald-500/10',
+            border: 'border-emerald-500/20',
+            loading: 'border-emerald-500'
+        },
+        purple: {
+            bg: 'bg-purple-500/10',
+            border: 'border-purple-500/20',
+            loading: 'border-purple-500'
+        }
+    };
+
+    const colors = colorMap[info.color as keyof typeof colorMap] || colorMap.blue;
+
     return (
         <div className="h-full bg-background/30 p-10 overflow-y-auto">
             <div className="max-w-5xl mx-auto">
                 <header className="mb-10 flex items-start justify-between">
                     <div className="flex gap-6 items-center">
-                        <div className={`p-4 rounded-2xl bg-${info.color}-500/10 border border-${info.color}-500/20`}>
+                        <div className={`p-4 rounded-2xl ${colors.bg} border ${colors.border}`}>
                             {info.icon}
                         </div>
                         <div>
@@ -146,7 +166,7 @@ export const AnalysisPage: React.FC<{ mode: string }> = ({ mode }) => {
                     <div className="lg:col-span-8">
                         {loading ? (
                             <div className="glass-card h-[500px] flex flex-col items-center justify-center text-center p-10 animate-pulse">
-                                <div className={`w-16 h-16 rounded-full border-t-2 border-${info.color}-500 animate-spin mb-6`} />
+                                <div className={`w-16 h-16 rounded-full border-t-2 ${colors.loading} animate-spin mb-6`} />
                                 <h4 className="font-bold text-xl mb-2 tracking-tight">AI Agents are Working</h4>
                                 <p className="text-slate-500 text-sm max-w-xs">Connecting chunks, parsing data, and generating high-accuracy results locally.</p>
                             </div>
