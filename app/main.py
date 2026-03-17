@@ -133,6 +133,21 @@ async def upload_documents(files: list[UploadFile] = File(...)):
         metadata={"indexed_files": result["indexed_files"]},
     )
 
+
+@app.post("/reindex", response_model=UploadResponse)
+async def reindex_documents():
+    """Re-index all supported documents in data/docs to refresh metadata."""
+    result = await run_in_threadpool(index_documents, None)
+    return UploadResponse(
+        success=True,
+        result={
+            "uploaded_files": result["indexed_files"],
+            "indexed_chunks": result["indexed_chunks"],
+            "skipped_files": result["skipped_files"],
+        },
+        metadata={"indexed_files": result["indexed_files"], "reindexed": True},
+    )
+
 @app.post("/query", response_model=QueryResponse)
 async def query_assistant(request: QueryRequest):
     """Query the RAG pipeline with LangGraph orchestration."""
