@@ -24,7 +24,7 @@ Before you begin, ensure you have the following installed:
       ollama pull llama3
       ollama pull nomic-embed-text
       ```
-2.  **Python 3.9+**: For the FastAPI backend.
+2.  **Python 3.11+**: For the FastAPI backend.
 3.  **Node.js & NPM**: For the React frontend.
 
 ## 📦 Installation & Setup
@@ -38,16 +38,19 @@ cd PrivAI-Secure-Enterprise-AI-Assistant
 ### 2. Backend Setup (FastAPI)
 ```bash
 # Create a virtual environment
-python -m venv venv
+python3.11 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
 
+# Configure environment variables
+cp .env.example .env
+
 # Start the backend server
-python -m app.main
+uvicorn app.main:app --reload
 ```
-The backend will run at `http://localhost:8000`.
+The backend will run at `http://localhost:8000` and expose health diagnostics at `/health`.
 
 ### 3. Frontend Setup (React + Vite)
 Open a new terminal window:
@@ -57,10 +60,21 @@ cd frontend
 # Install dependencies
 npm install
 
+# Configure frontend environment
+cp .env.example .env
+
 # Start the development server
 npm run dev
 ```
 The frontend will be available at `http://localhost:5173`.
+
+### 4. Smoke Test the Full API
+With backend and Ollama running:
+```bash
+source venv/bin/activate
+python scripts/api_smoke_test.py --base-url http://127.0.0.1:8000
+```
+This validates upload + all AI task modes (`chat`, `search`, `summarize`, `analyze`, `meeting`).
 
 ## 📖 How to Use
 
@@ -70,14 +84,15 @@ The frontend will be available at `http://localhost:5173`.
     - Switch to **Summarizer** for quick highlights.
     - Use **Contract Analyzer** for legal reviews.
     - Use **Meeting Intel** for transcript processing.
-4.  **Approve Responses**: Every AI response must be reviewed and approved in the UI before it is finalized, ensuring a human remains in control.
+4.  **Review Outputs**: Responses include context validation status and source citations.
 
 ## 📂 Project Structure
 
 - `app/`: FastAPI backend implementation.
   - `core/`: Configuration and LLM logic.
-  - `services/`: LangGraph orchestration, agents, and RAG service.
+  - `services/`: LangGraph orchestration, agents, ingestion, and retrieval services.
   - `schemas/`: Pydantic models for API validation.
+- `scripts/`: Automation scripts (`api_smoke_test.py`) for quick API validation.
 - `frontend/`: Modern React dashboard (TypeScript, Tailwind CSS).
 - `data/`: Local storage for documents and ChromaDB vector store.
 - `requirements.txt`: Backend dependencies.

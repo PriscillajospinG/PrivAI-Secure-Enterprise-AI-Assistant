@@ -1,21 +1,16 @@
-import os
-import chromadb
-from typing import List
-from langchain_community.document_loaders import PyPDFLoader, TextLoader, DirectoryLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 import hashlib
 import os
 from pathlib import Path
 from typing import Iterable
 
 import chromadb
+from langchain_chroma import Chroma
 from langchain_community.document_loaders import PyPDFLoader, TextLoader
-def load_documents(directory_path: str):
-    """Load PDF and TXT documents from the specified directory."""
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-    # Load PDF files
-    pdf_loader = DirectoryLoader(directory_path, glob="**/*.pdf", loader_cls=PyPDFLoader)
-    # Load Text files
+from app.core.config import settings
+from app.core.llm_factory import get_embeddings
+
 
 def _file_hash(path: str) -> str:
     hasher = hashlib.sha256()
@@ -56,20 +51,20 @@ def load_documents(file_paths: Iterable[str]):
             }
             all_docs.append(doc)
     return all_docs
-        chunk_overlap=settings.CHUNK_OVERLAP
 
-    )
-    return text_splitter.split_documents(documents)
 
-def create_vector_store():
+def split_documents(documents):
+    """Split documents into smaller chunks with consistent overlap."""
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=settings.CHUNK_SIZE,
         chunk_overlap=settings.CHUNK_OVERLAP,
         separators=["\n\n", "\n", ". ", " ", ""],
-    embeddings = get_embeddings()
+    )
     chunks = text_splitter.split_documents(documents)
     for idx, chunk in enumerate(chunks):
         chunk.metadata["chunk_index"] = idx
     return chunks
-    # Ensure the storage directory exists
+
 
 def _discover_documents() -> list[str]:
     docs_dir = Path(settings.DOCS_DIR)
@@ -86,8 +81,8 @@ def _discover_documents() -> list[str]:
 
 def get_vector_store() -> Chroma:
     """Get or create the persistent Chroma vector store."""
-    
-        client = chromadb.PersistentClient(
+    embeddings = get_embeddings()
+    os.makedirs(settings.CHROMA_DIR, exist_ok=True)
     client = chromadb.PersistentClient(path=settings.CHROMA_DIR)
     return Chroma(
         client=client,
@@ -106,7 +101,11 @@ def index_documents(file_paths: list[str] | None = None) -> dict:
     vector_store = get_vector_store()
     loaded_docs = load_documents(paths)
     if not loaded_docs:
-        return {"indexed_chunks": 0, "indexed_files": [], "skipped_files": [os.path.basename(p) for p in paths]}
+        return {
+            "indexed_chunks": 0,
+            "indexed_files": [],
+            "skipped_files": [os.path.basename(path) for path in paths],
+        }
 
     chunks = split_documents(loaded_docs)
     ids = []
@@ -121,7 +120,6 @@ def index_documents(file_paths: list[str] | None = None) -> dict:
         try:
             vector_store.delete(where={"source_file": source_file})
         except Exception:
-            # Collection may be empty on first run.
             pass
 
     vector_store.add_documents(chunks, ids=ids)
