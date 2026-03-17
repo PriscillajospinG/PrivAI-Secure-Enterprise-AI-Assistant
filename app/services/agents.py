@@ -1,4 +1,5 @@
 import json
+import os
 from statistics import mean
 from typing import Any
 
@@ -86,11 +87,17 @@ def retrieval_agent(state: dict[str, Any]) -> dict[str, Any]:
         if isinstance(page_raw, int):
             page_number = page_raw + 1 if page_raw >= 0 else None
 
+        raw_source = doc.metadata.get("source_file") or doc.metadata.get("source") or "unknown"
+        source_name = os.path.basename(str(raw_source)) or "unknown"
+        chunk_id = doc.metadata.get("chunk_index")
+        if chunk_id is None:
+            chunk_id = doc.metadata.get("source_doc_index", len(context))
+
         context.append(content)
         sources.append(
             {
-                "source": doc.metadata.get("source_file", doc.metadata.get("source", "unknown")),
-                "chunk_id": str(doc.metadata.get("chunk_index", "")),
+                "source": source_name,
+                "chunk_id": str(chunk_id),
                 "page_number": page_number,
                 "score": round(float(score), 4) if score is not None else None,
                 "snippet": content[:240],
