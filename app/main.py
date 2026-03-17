@@ -142,13 +142,16 @@ async def query_assistant(request: QueryRequest):
         "top_k": request.top_k,
         "effective_top_k": request.top_k,
         "attempts": 0,
+        "validation_attempts": 0,
         "context": [],
         "sources": [],
         "analysis_sufficient": False,
         "confidence": 0.0,
         "response": "",
+        "structured_output": None,
         "validation_result": "",
         "approved": False,
+        "should_regenerate": False,
     }
 
     result = await run_in_threadpool(rag_graph.invoke, initial_state)
@@ -166,12 +169,14 @@ async def query_assistant(request: QueryRequest):
             "approved": result.get("approved", False),
             "validation": result.get("validation_result", ""),
             "confidence": float(result.get("confidence", 0.0)),
+            "structured_output": result.get("structured_output"),
             "sources": result.get("sources", []),
             "context_preview": result.get("context", [])[:3],
         },
         metadata={
             "attempts": result.get("attempts", 0),
             "effective_top_k": result.get("effective_top_k", request.top_k),
+            "validation_attempts": result.get("validation_attempts", 0),
         },
     )
 

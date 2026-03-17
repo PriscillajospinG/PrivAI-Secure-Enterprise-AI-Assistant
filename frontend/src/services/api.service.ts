@@ -19,6 +19,7 @@ export interface QueryRequest {
 export interface SourceCitation {
     source: string;
     chunk_id: string;
+    page_number?: number | null;
     score?: number | null;
     snippet: string;
 }
@@ -30,6 +31,7 @@ export interface QueryResult {
     validation: string;
     approved: boolean;
     confidence: number;
+    structured_output?: Record<string, unknown> | null;
     sources: SourceCitation[];
     context_preview: string[];
 }
@@ -40,6 +42,7 @@ export interface QueryResponse {
     metadata: {
         attempts?: number;
         effective_top_k?: number;
+        validation_attempts?: number;
     };
 }
 

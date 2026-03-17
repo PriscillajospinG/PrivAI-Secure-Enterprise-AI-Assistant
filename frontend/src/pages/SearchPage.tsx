@@ -7,6 +7,8 @@ export const SearchPage: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [answer, setAnswer] = useState('');
     const [sources, setSources] = useState<Array<{ source: string; snippet: string }>>([]);
+    const [confidence, setConfidence] = useState<number | null>(null);
+    const [validation, setValidation] = useState('');
     const [error, setError] = useState('');
 
     const runSearch = async () => {
@@ -23,10 +25,19 @@ export const SearchPage: React.FC = () => {
                 top_k: 6,
             });
             setAnswer(response.result.response);
-            setSources(response.result.sources.map((source) => ({ source: source.source, snippet: source.snippet })));
+            setConfidence(response.result.confidence);
+            setValidation(response.result.validation);
+            setSources(
+                response.result.sources.map((source) => ({
+                    source: `${source.source} (chunk ${source.chunk_id || 'n/a'}, page ${source.page_number ?? 'n/a'}, score ${(source.score ?? 0).toFixed(2)})`,
+                    snippet: source.snippet,
+                }))
+            );
         } catch (err) {
             setAnswer('');
             setSources([]);
+            setConfidence(null);
+            setValidation('');
             setError(getApiErrorMessage(err));
         } finally {
             setLoading(false);
@@ -75,7 +86,13 @@ export const SearchPage: React.FC = () => {
                                 Searching indexed documents...
                             </div>
                         ) : answer ? (
-                            <p className="text-slate-200 whitespace-pre-wrap leading-relaxed">{answer}</p>
+                            <div className="space-y-3">
+                                <p className="text-slate-200 whitespace-pre-wrap leading-relaxed">{answer}</p>
+                                <div className="text-xs text-slate-400">
+                                    Confidence: <span className="font-semibold text-slate-200">{(confidence ?? 0).toFixed(2)}</span>
+                                </div>
+                                {validation && <p className="text-xs text-slate-500">Validation: {validation}</p>}
+                            </div>
                         ) : (
                             <p className="text-slate-500">Run a search to see context-grounded results.</p>
                         )}

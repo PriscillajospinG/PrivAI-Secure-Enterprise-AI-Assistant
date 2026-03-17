@@ -48,12 +48,13 @@ export const ChatPage: React.FC<{ mode: string }> = ({ mode }) => {
             });
 
             const sourceHint = result.result.sources.length > 0
-                ? `\n\nSources: ${result.result.sources.map((s) => s.source).join(', ')}`
+                ? `\n\nSources: ${result.result.sources.map((s) => `${s.source} (chunk ${s.chunk_id || 'n/a'}, page ${s.page_number ?? 'n/a'})`).join('; ')}`
                 : '';
+            const validationHint = `\n\nValidation: ${result.result.approved ? 'approved' : 'needs review'} | confidence ${result.result.confidence.toFixed(2)}`;
 
             setMessages(prev => prev.map(msg =>
                 msg.id === assistantMsgId
-                    ? { ...msg, content: `${result.result.response}${sourceHint}`, isLoading: false }
+                    ? { ...msg, content: `${result.result.response}${validationHint}${sourceHint}`, isLoading: false }
                     : msg
             ));
         } catch (err) {
