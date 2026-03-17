@@ -136,10 +136,9 @@ def create_vector_store():
 
 
 def get_relevant_documents(query: str, top_k: int | None = None):
-    """Return documents for query with a configurable top-k."""
+    """Return documents with relevance scores for the query."""
     vector_store = get_vector_store()
-    retriever = vector_store.as_retriever(search_kwargs={"k": top_k or settings.RETRIEVAL_TOP_K})
-    return retriever.invoke(query)
+    return vector_store.similarity_search_with_relevance_scores(query, k=top_k or settings.RETRIEVAL_TOP_K)
 
 
 def get_store_stats() -> dict:

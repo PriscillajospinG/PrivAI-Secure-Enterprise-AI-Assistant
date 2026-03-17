@@ -15,6 +15,7 @@ class TaskType(str, Enum):
 class SourceCitation(BaseModel):
     source: str = "unknown"
     chunk_id: str = ""
+    page_number: int | None = None
     score: float | None = None
     snippet: str = ""
 
@@ -32,6 +33,7 @@ class QueryResult(BaseModel):
     approved: bool
     validation: str
     confidence: float = 0.0
+    structured_output: dict[str, Any] | None = None
     sources: list[SourceCitation] = Field(default_factory=list)
     context_preview: list[str] = Field(default_factory=list)
 

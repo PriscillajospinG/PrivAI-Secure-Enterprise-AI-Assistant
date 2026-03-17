@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     RETRIEVAL_TOP_K: int = 4
     RETRIEVAL_MIN_SOURCE_LENGTH: int = 50
     RETRIEVAL_RETRY_LIMIT: int = 1
+    VALIDATION_RETRY_LIMIT: int = 1
 
     ALLOWED_FILE_EXTENSIONS: str = ".txt,.pdf"
     MAX_UPLOAD_FILES: int = 20
