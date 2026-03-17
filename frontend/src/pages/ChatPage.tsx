@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Loader2, Info } from 'lucide-react';
-import { aiService } from '../services/api.service';
+import { aiService, getApiErrorMessage } from '../services/api.service';
 
 interface Message {
     id: string;
@@ -44,18 +44,22 @@ export const ChatPage: React.FC<{ mode: string }> = ({ mode }) => {
         try {
             const result = await aiService.query({
                 query: input,
-                task_type: mode
+                task_type: mode === 'search' ? 'search' : 'chat'
             });
+
+            const sourceHint = result.result.sources.length > 0
+                ? `\n\nSources: ${result.result.sources.map((s) => s.source).join(', ')}`
+                : '';
 
             setMessages(prev => prev.map(msg =>
                 msg.id === assistantMsgId
-                    ? { ...msg, content: result.response, isLoading: false }
+                    ? { ...msg, content: `${result.result.response}${sourceHint}`, isLoading: false }
                     : msg
             ));
-        } catch (error) {
+        } catch (err) {
             setMessages(prev => prev.map(msg =>
                 msg.id === assistantMsgId
-                    ? { ...msg, content: "Sorry, I encountered an error connecting to the local LLM. Please make sure Ollama is running.", isLoading: false }
+                    ? { ...msg, content: `Request failed: ${getApiErrorMessage(err)}`, isLoading: false }
                     : msg
             ));
         } finally {

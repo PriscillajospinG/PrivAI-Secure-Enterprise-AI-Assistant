@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Upload, File, CheckCircle2, AlertCircle, Loader2, X } from 'lucide-react';
-import { aiService } from '../services/api.service';
+import { aiService, getApiErrorMessage } from '../services/api.service';
 
 export const UploadPage: React.FC = () => {
     const [files, setFiles] = useState<File[]>([]);
@@ -28,15 +28,18 @@ export const UploadPage: React.FC = () => {
             files.forEach(file => data.items.add(file));
 
             const result = await aiService.upload(data.files);
+            const skipped = result.result.skipped_files.length > 0
+                ? ` Skipped: ${result.result.skipped_files.join(', ')}.`
+                : '';
             setStatus({
                 type: 'success',
-                message: `${result.file_count} documents successfully indexed into the local vector database.`
+                message: `${result.result.uploaded_files.length} files uploaded, ${result.result.indexed_chunks} chunks indexed.${skipped}`
             });
             setFiles([]);
-        } catch (error) {
+        } catch (err) {
             setStatus({
                 type: 'error',
-                message: 'Failed to upload and index documents. Please check backend connectivity.'
+                message: `Failed to upload and index documents: ${getApiErrorMessage(err)}`
             });
         } finally {
             setUploading(false);
@@ -58,6 +61,7 @@ export const UploadPage: React.FC = () => {
                             <input
                                 type="file"
                                 multiple
+                                accept=".txt,.pdf"
                                 onChange={handleFileChange}
                                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                             />
@@ -66,7 +70,7 @@ export const UploadPage: React.FC = () => {
                                     <Upload className="text-accent-primary" size={32} />
                                 </div>
                                 <h3 className="font-bold text-lg mb-1">Click or drag documents here</h3>
-                                <p className="text-sm text-slate-500">Supports PDF, TXT, and Docx files</p>
+                                <p className="text-sm text-slate-500">Supports PDF and TXT files</p>
                                 <div className="mt-6 px-4 py-2 bg-accent-primary text-white rounded-lg text-sm font-bold shadow-lg shadow-blue-500/20 opacity-0 group-hover:opacity-100 transition-opacity">
                                     Select Files
                                 </div>

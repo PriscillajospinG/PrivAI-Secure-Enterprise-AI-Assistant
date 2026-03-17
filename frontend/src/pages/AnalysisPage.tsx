@@ -8,7 +8,7 @@ import {
     Download,
     Terminal
 } from 'lucide-react';
-import { aiService } from '../services/api.service';
+import { aiService, getApiErrorMessage, type TaskType } from '../services/api.service';
 
 export const AnalysisPage: React.FC<{ mode: string }> = ({ mode }) => {
     const [query, setQuery] = useState('');
@@ -63,11 +63,13 @@ export const AnalysisPage: React.FC<{ mode: string }> = ({ mode }) => {
         try {
             const resp = await aiService.query({
                 query: query,
-                task_type: mode
+                task_type: mode as TaskType
             });
-            setResult(resp.response);
-        } catch (error) {
-            setResult("Error: Failed to perform analysis. Ensure the document is in the knowledge base.");
+            const sourceList = resp.result.sources.map((source) => `- ${source.source}`).join('\n');
+            const output = `${resp.result.response}\n\nConfidence: ${resp.result.confidence.toFixed(2)}${sourceList ? `\n\nSources:\n${sourceList}` : ''}`;
+            setResult(output);
+        } catch (err) {
+            setResult(`Error: ${getApiErrorMessage(err)}`);
         } finally {
             setLoading(false);
         }

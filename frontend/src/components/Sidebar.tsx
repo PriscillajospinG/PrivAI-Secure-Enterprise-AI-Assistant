@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import type { TaskType } from '../services/api.service';
 
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
@@ -44,8 +45,8 @@ const SidebarItem = ({ icon, label, active, onClick }: SidebarItemProps) => (
 );
 
 interface SidebarProps {
-    activeMode: string;
-    onModeChange: (mode: string) => void;
+    activeMode: TaskType | 'upload';
+    onModeChange: (mode: TaskType | 'upload') => void;
 }
 
 export const Sidebar = ({ activeMode, onModeChange }: SidebarProps) => {

@@ -3,15 +3,18 @@ import { Sidebar } from './components/Sidebar';
 import { ChatPage } from './pages/ChatPage';
 import { UploadPage } from './pages/UploadPage';
 import { AnalysisPage } from './pages/AnalysisPage';
+import { SearchPage } from './pages/SearchPage';
+import type { TaskType } from './services/api.service';
 
 const App: React.FC = () => {
-  const [activeMode, setActiveMode] = useState('chat');
+  const [activeMode, setActiveMode] = useState<TaskType | 'upload'>('chat');
 
   const renderContent = () => {
     switch (activeMode) {
       case 'chat':
+        return <ChatPage mode="chat" />;
       case 'search':
-        return <ChatPage mode={activeMode} />;
+        return <SearchPage />;
       case 'upload':
         return <UploadPage />;
       case 'summarize':

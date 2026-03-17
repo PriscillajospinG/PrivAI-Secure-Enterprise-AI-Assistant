@@ -1,80 +1,179 @@
 import os
 import shutil
-from fastapi import FastAPI, UploadFile, File, HTTPException
+import time
+from collections import defaultdict, deque
+from pathlib import Path
+
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
+from fastapi.concurrency import run_in_threadpool
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
+
 from app.core.config import settings
-from app.schemas.chat import QueryRequest, QueryResponse, UploadResponse
-from app.services.document_service import create_vector_store
+from app.core.llm_factory import check_ollama_status
+from app.schemas.chat import ErrorResponse, QueryRequest, QueryResponse, UploadResponse
+from app.services.document_service import get_store_stats, index_documents
 from app.services.graph_service import rag_graph
 
 app = FastAPI(title=settings.PROJECT_NAME)
 
+_rate_limiter_state: dict[str, deque[float]] = defaultdict(deque)
+
 # CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=settings.allowed_origins(),
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # Ensure directories exist
 os.makedirs(settings.DOCS_DIR, exist_ok=True)
+os.makedirs(settings.CHROMA_DIR, exist_ok=True)
+
+
+@app.on_event("startup")
+async def startup_checks():
+    await run_in_threadpool(get_store_stats)
+    check_ollama_status()
+
+
+@app.middleware("http")
+async def simple_rate_limit(request: Request, call_next):
+    client_ip = request.client.host if request.client else "unknown"
+    now = time.time()
+    window_start = now - settings.RATE_LIMIT_WINDOW_SECONDS
+    bucket = _rate_limiter_state[client_ip]
+    while bucket and bucket[0] < window_start:
+        bucket.popleft()
+    if len(bucket) >= settings.RATE_LIMIT_REQUESTS:
+        return JSONResponse(
+            status_code=429,
+            content=ErrorResponse(success=False, error="rate_limited", detail="Too many requests").model_dump(),
+        )
+    bucket.append(now)
+    return await call_next(request)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(_: Request, exc: RequestValidationError):
+    return JSONResponse(
+        status_code=422,
+        content=ErrorResponse(success=False, error="validation_error", detail=str(exc)).model_dump(),
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(_: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content=ErrorResponse(
+            success=False,
+            error="internal_server_error",
+            detail=str(exc) if settings.APP_ENV != "production" else "An internal error occurred.",
+        ).model_dump(),
+    )
+
+
+def _safe_filename(filename: str) -> str:
+    base = os.path.basename(filename or "")
+    safe = "".join(ch for ch in base if ch.isalnum() or ch in {"-", "_", "."}).strip(".")
+    if not safe:
+        safe = f"upload_{int(time.time() * 1000)}.txt"
+    return safe
+
+
+def _validate_extension(filename: str) -> bool:
+    return Path(filename).suffix.lower() in settings.allowed_extensions()
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy"}
+    ollama = check_ollama_status()
+    vector_stats = get_store_stats()
+    return {
+        "status": "healthy" if ollama.get("available") else "degraded",
+        "ollama": ollama,
+        "vector_store": vector_stats,
+        "environment": settings.APP_ENV,
+    }
 
 @app.post("/upload", response_model=UploadResponse)
 async def upload_documents(files: list[UploadFile] = File(...)):
-    """Upload documents and refresh the vector store."""
+    """Upload documents and incrementally index supported files."""
+    if len(files) > settings.MAX_UPLOAD_FILES:
+        raise HTTPException(status_code=400, detail=f"Too many files. Max allowed is {settings.MAX_UPLOAD_FILES}.")
+
+    stored_paths: list[str] = []
+    uploaded_names: list[str] = []
+    skipped_files: list[str] = []
+
     for file in files:
-        file_path = os.path.join(settings.DOCS_DIR, file.filename)
+        safe_name = _safe_filename(file.filename)
+        if not _validate_extension(safe_name):
+            skipped_files.append(file.filename)
+            continue
+
+        file_path = os.path.join(settings.DOCS_DIR, safe_name)
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
-    
-    # Reload vector store after upload
-    create_vector_store()
-    
+        stored_paths.append(file_path)
+        uploaded_names.append(safe_name)
+
+    result = await run_in_threadpool(index_documents, stored_paths)
+
     return UploadResponse(
-        message="Documents uploaded and indexed successfully.",
-        file_count=len(files)
+        success=True,
+        result={
+            "uploaded_files": uploaded_names,
+            "indexed_chunks": result["indexed_chunks"],
+            "skipped_files": skipped_files,
+        },
+        metadata={"indexed_files": result["indexed_files"]},
     )
 
 @app.post("/query", response_model=QueryResponse)
 async def query_assistant(request: QueryRequest):
-    """Query the RAG pipeline with routing support for different task types."""
-    try:
-        # Run the LangGraph workflow
-        initial_state = {
-            "task_type": request.task_type,
-            "query": request.query,
-            "context": [],
-            "analysis_sufficient": False,
-            "response": "",
-            "validation_result": "",
-            "approved": False
-        }
-        
-        result = rag_graph.invoke(initial_state)
-        
-        if not result.get("response"):
-            raise HTTPException(status_code=404, detail="Assistant could not find relevant information.")
-            
-        return QueryResponse(
-            query=request.query,
-            response=result["response"],
-            context=result["context"],
-            validation=result["validation_result"],
-            approved=result["approved"],
-            task_type=result["task_type"]
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    """Query the RAG pipeline with LangGraph orchestration."""
+    initial_state = {
+        "task_type": request.task_type.value,
+        "query": request.query,
+        "top_k": request.top_k,
+        "effective_top_k": request.top_k,
+        "attempts": 0,
+        "context": [],
+        "sources": [],
+        "analysis_sufficient": False,
+        "confidence": 0.0,
+        "response": "",
+        "validation_result": "",
+        "approved": False,
+    }
 
-# Serve frontend static files (Disabled to avoid confusion with new React frontend)
-# app.mount("/", StaticFiles(directory="static", html=True), name="static")
+    result = await run_in_threadpool(rag_graph.invoke, initial_state)
+
+    response = result.get("response")
+    if not response:
+        raise HTTPException(status_code=404, detail="Assistant could not find relevant information.")
+
+    return QueryResponse(
+        success=True,
+        result={
+            "query": request.query,
+            "task_type": request.task_type,
+            "response": response,
+            "approved": result.get("approved", False),
+            "validation": result.get("validation_result", ""),
+            "confidence": float(result.get("confidence", 0.0)),
+            "sources": result.get("sources", []),
+            "context_preview": result.get("context", [])[:3],
+        },
+        metadata={
+            "attempts": result.get("attempts", 0),
+            "effective_top_k": result.get("effective_top_k", request.top_k),
+        },
+    )
 
 if __name__ == "__main__":
     import uvicorn
