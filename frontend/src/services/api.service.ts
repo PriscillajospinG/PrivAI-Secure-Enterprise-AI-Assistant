@@ -29,6 +29,7 @@ export interface QueryResult {
     task_type: TaskType;
     response: string;
     validation: string;
+    validation_status: string;
     approved: boolean;
     confidence: number;
     structured_output?: Record<string, unknown> | null;

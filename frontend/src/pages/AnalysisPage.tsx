@@ -11,6 +11,7 @@ import {
     CheckCircle2,
 } from 'lucide-react';
 import { aiService, getApiErrorMessage, type QueryResult, type TaskType } from '../services/api.service';
+import { MarkdownContent } from '../components/MarkdownContent';
 
 const sectionTitle = (key: string) => key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
@@ -31,7 +32,7 @@ const StructuredOutput: React.FC<{ result: QueryResult }> = ({ result }) => {
         return (
             <div className="space-y-2">
                 <h4 className="font-semibold text-slate-200">Narrative Output</h4>
-                <p className="text-slate-300 whitespace-pre-wrap leading-relaxed">{result.response}</p>
+                <MarkdownContent content={result.response} />
             </div>
         );
     }
@@ -51,7 +52,7 @@ const StructuredOutput: React.FC<{ result: QueryResult }> = ({ result }) => {
             ))}
             <section className="rounded-xl border border-white/10 bg-white/5 p-4">
                 <h4 className="text-sm font-bold uppercase tracking-widest text-slate-400 mb-2">Raw Narrative</h4>
-                <p className="text-slate-300 whitespace-pre-wrap leading-relaxed">{result.response}</p>
+                <MarkdownContent content={result.response} />
             </section>
         </div>
     );
@@ -185,6 +186,9 @@ export const AnalysisPage: React.FC<{ mode: string }> = ({ mode }) => {
                                     )}
                                 </div>
                                 <p className="text-xs text-slate-400">{result.validation}</p>
+                                {result.validation_status && (
+                                    <p className="text-xs text-slate-300">Status: {result.validation_status}</p>
+                                )}
                                 <div className="pt-2 border-t border-white/10">
                                     <span className="text-xs text-slate-400">Confidence: </span>
                                     <span className="text-sm font-bold text-slate-200">{result.confidence.toFixed(2)}</span>

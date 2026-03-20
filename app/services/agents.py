@@ -128,20 +128,19 @@ def generation_agent(state: dict[str, Any]) -> dict[str, Any]:
     """Generate grounded Q&A answer strictly from retrieved context."""
     query = state["query"]
     context = "\n\n".join(state.get("context", []))
-    sources = ", ".join(sorted({source.get("source", "unknown") for source in state.get("sources", [])}))
 
     prompt = f"""
 You are PrivAI, a strict enterprise assistant.
 Answer only using the provided context.
 If information is not present, respond exactly: "Information not found in provided context."
 Do not infer, invent, or add external facts.
+Format the answer using markdown headings and bullet points.
+Use concise sections suitable for an enterprise report.
+Do not include raw metadata such as JSON, sources list, validation lines, or confidence text.
 
 User Query: {query}
 Context:
 {context}
-
-Return concise text answer followed by a line:
-Sources: {sources if sources else 'Not available'}
 """
     response_msg = llm.invoke([HumanMessage(content=prompt)])
     return {"response": response_msg.content, "structured_output": None}
@@ -161,6 +160,8 @@ def summarization_agent(state: dict[str, Any]) -> dict[str, Any]:
 You are a strict summarization assistant.
 Use only the provided context.
 If a section cannot be found, set it to "Not present in document".
+Format output content for enterprise readability.
+Do not add metadata fields beyond the required JSON structure.
 
 Context:
 {context}
@@ -228,6 +229,7 @@ Extract only information explicitly present in the provided context.
 Never infer or invent clauses, risks, obligations, or terms.
 When a section is absent, return exactly "Not present in document" for that section.
 When possible, use exact text spans copied from the context.
+Do not include any extra fields, markdown wrappers, or metadata.
 
 Context:
 {context}

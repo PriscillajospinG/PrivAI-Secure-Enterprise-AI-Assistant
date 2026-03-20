@@ -1,11 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Loader2, Info } from 'lucide-react';
 import { aiService, getApiErrorMessage } from '../services/api.service';
+import { MarkdownContent } from '../components/MarkdownContent';
 
 interface Message {
     id: string;
     role: 'assistant' | 'user';
     content: string;
+    confidence?: number;
+    validationStatus?: string;
+    sources?: Array<{ source: string; chunk_id: string; page_number?: number | null; score?: number | null }>;
     isLoading?: boolean;
 }
 
@@ -47,14 +51,16 @@ export const ChatPage: React.FC<{ mode: string }> = ({ mode }) => {
                 task_type: mode === 'search' ? 'search' : 'chat'
             });
 
-            const sourceHint = result.result.sources.length > 0
-                ? `\n\nSources: ${result.result.sources.map((s) => `${s.source} (chunk ${s.chunk_id || 'n/a'}, page ${s.page_number ?? 'n/a'})`).join('; ')}`
-                : '';
-            const validationHint = `\n\nValidation: ${result.result.approved ? 'approved' : 'needs review'} | confidence ${result.result.confidence.toFixed(2)}`;
-
             setMessages(prev => prev.map(msg =>
                 msg.id === assistantMsgId
-                    ? { ...msg, content: `${result.result.response}${validationHint}${sourceHint}`, isLoading: false }
+                    ? {
+                        ...msg,
+                        content: result.result.response,
+                        confidence: result.result.confidence,
+                        validationStatus: result.result.validation_status,
+                        sources: result.result.sources,
+                        isLoading: false,
+                    }
                     : msg
             ));
         } catch (err) {
@@ -105,7 +111,33 @@ export const ChatPage: React.FC<{ mode: string }> = ({ mode }) => {
                                         <span className="text-sm font-medium italic opacity-70">Processing context and generating response...</span>
                                     </div>
                                 ) : (
-                                    msg.content
+                                    <div className="space-y-3">
+                                        <MarkdownContent content={msg.content} />
+                                        {msg.role === 'assistant' && (
+                                            <div className="space-y-2 pt-2 border-t border-white/10 text-xs text-slate-400">
+                                                {typeof msg.confidence === 'number' && (
+                                                    <div>
+                                                        Confidence: <span className="font-semibold text-slate-200">{msg.confidence.toFixed(2)}</span>
+                                                    </div>
+                                                )}
+                                                {msg.validationStatus && (
+                                                    <div>Validation: {msg.validationStatus}</div>
+                                                )}
+                                                {msg.sources && msg.sources.length > 0 && (
+                                                    <div>
+                                                        <div className="mb-1">Sources</div>
+                                                        <ul className="space-y-1">
+                                                            {msg.sources.map((source, index) => (
+                                                                <li key={`${source.source}-${source.chunk_id}-${index}`}>
+                                                                    {source.source} • chunk {source.chunk_id || 'n/a'} • page {source.page_number ?? 'n/a'}
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
                                 )}
                                 {msg.role === 'assistant' && !msg.isLoading && (
                                     <div className="absolute -bottom-6 right-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2 text-[10px] text-slate-500">

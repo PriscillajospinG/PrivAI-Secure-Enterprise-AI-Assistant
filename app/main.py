@@ -15,6 +15,7 @@ from app.core.llm_factory import check_ollama_status
 from app.schemas.chat import ErrorResponse, QueryRequest, QueryResponse, UploadResponse
 from app.services.document_service import get_store_stats, index_documents
 from app.services.graph_service import rag_graph
+from app.services.response_formatter import format_answer, format_sources, format_validation_status
 
 app = FastAPI(title=settings.PROJECT_NAME)
 
@@ -175,17 +176,27 @@ async def query_assistant(request: QueryRequest):
     if not response:
         raise HTTPException(status_code=404, detail="Assistant could not find relevant information.")
 
+    approved = bool(result.get("approved", False))
+    cleaned_sources = format_sources(result.get("sources", []))
+    formatted_answer = format_answer(
+        query=request.query,
+        response=response,
+        structured_output=result.get("structured_output"),
+    )
+    validation_status = format_validation_status(approved)
+
     return QueryResponse(
         success=True,
         result={
             "query": request.query,
             "task_type": request.task_type,
-            "response": response,
-            "approved": result.get("approved", False),
+            "response": formatted_answer,
+            "approved": approved,
             "validation": result.get("validation_result", ""),
+            "validation_status": validation_status,
             "confidence": float(result.get("confidence", 0.0)),
             "structured_output": result.get("structured_output"),
-            "sources": result.get("sources", []),
+            "sources": cleaned_sources,
             "context_preview": result.get("context", [])[:3],
         },
         metadata={

@@ -32,6 +32,7 @@ class QueryResult(BaseModel):
     response: str
     approved: bool
     validation: str
+    validation_status: str = ""
     confidence: float = 0.0
     structured_output: dict[str, Any] | None = None
     sources: list[SourceCitation] = Field(default_factory=list)

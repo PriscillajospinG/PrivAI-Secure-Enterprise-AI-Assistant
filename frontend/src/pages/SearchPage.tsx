@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Loader2, Search, FileText } from 'lucide-react';
 import { aiService, getApiErrorMessage } from '../services/api.service';
+import { MarkdownContent } from '../components/MarkdownContent';
 
 export const SearchPage: React.FC = () => {
     const [query, setQuery] = useState('');
@@ -9,6 +10,7 @@ export const SearchPage: React.FC = () => {
     const [sources, setSources] = useState<Array<{ source: string; snippet: string }>>([]);
     const [confidence, setConfidence] = useState<number | null>(null);
     const [validation, setValidation] = useState('');
+    const [validationStatus, setValidationStatus] = useState('');
     const [error, setError] = useState('');
 
     const runSearch = async () => {
@@ -27,6 +29,7 @@ export const SearchPage: React.FC = () => {
             setAnswer(response.result.response);
             setConfidence(response.result.confidence);
             setValidation(response.result.validation);
+            setValidationStatus(response.result.validation_status);
             setSources(
                 response.result.sources.map((source) => ({
                     source: `${source.source} (chunk ${source.chunk_id || 'n/a'}, page ${source.page_number ?? 'n/a'}, score ${(source.score ?? 0).toFixed(2)})`,
@@ -38,6 +41,7 @@ export const SearchPage: React.FC = () => {
             setSources([]);
             setConfidence(null);
             setValidation('');
+            setValidationStatus('');
             setError(getApiErrorMessage(err));
         } finally {
             setLoading(false);
@@ -87,11 +91,12 @@ export const SearchPage: React.FC = () => {
                             </div>
                         ) : answer ? (
                             <div className="space-y-3">
-                                <p className="text-slate-200 whitespace-pre-wrap leading-relaxed">{answer}</p>
+                                <MarkdownContent content={answer} />
                                 <div className="text-xs text-slate-400">
                                     Confidence: <span className="font-semibold text-slate-200">{(confidence ?? 0).toFixed(2)}</span>
                                 </div>
-                                {validation && <p className="text-xs text-slate-500">Validation: {validation}</p>}
+                                {validationStatus && <p className="text-xs text-slate-300">Validation: {validationStatus}</p>}
+                                {validation && <p className="text-xs text-slate-500">Validator Notes: {validation}</p>}
                             </div>
                         ) : (
                             <p className="text-slate-500">Run a search to see context-grounded results.</p>
