@@ -26,6 +26,9 @@ ENV/
 
 # Local Environment
 .env
+.env.*
+!.env.example
+!.env.*.example
 .vscode/
 .idea/
 
@@ -33,4 +36,8 @@ ENV/
 data/docs/*
 !data/docs/.gitkeep
 data/chroma/
+data/chroma/**
+frontend/node_modules/
+frontend/dist/
+*.sqlite3
 *.log
