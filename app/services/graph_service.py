@@ -5,8 +5,10 @@ from langgraph.graph import END, StateGraph
 from app.core.config import settings
 from app.services.agents import (
     analysis_agent,
+    classify_query_agent,
     extraction_agent,
     fallback_agent,
+    general_conversation_agent,
     generation_agent,
     retrieval_agent,
     retrieval_retry_agent,
@@ -18,6 +20,7 @@ from app.services.agents import (
 
 class AgentState(TypedDict):
     task_type: str
+    query_route: str
     query: str
     top_k: int
     effective_top_k: int
@@ -49,6 +52,10 @@ def task_router(state: AgentState) -> str:
     return "chat"
 
 
+def query_route_router(state: AgentState) -> str:
+    return "general" if state.get("query_route") == "general" else "document"
+
+
 def retrieval_outcome_router(state: AgentState) -> str:
     has_context = bool(state.get("context"))
     attempts = state.get("attempts", 0)
@@ -56,11 +63,17 @@ def retrieval_outcome_router(state: AgentState) -> str:
         return "has_context"
     if attempts < settings.RETRIEVAL_RETRY_LIMIT:
         return "retry"
+    if state.get("task_type") in {"chat", "search"}:
+        return "general_fallback"
     return "fallback"
 
 
 def analysis_router(state: AgentState) -> str:
-    return "generate" if state.get("analysis_sufficient") else "fallback"
+    if state.get("analysis_sufficient"):
+        return "generate"
+    if state.get("task_type") in {"chat", "search"}:
+        return "general_fallback"
+    return "fallback"
 
 
 def validation_router(state: AgentState) -> str:
@@ -94,6 +107,8 @@ def human_approval_node(state: AgentState) -> dict[str, Any]:
 def create_rag_graph():
     workflow = StateGraph(AgentState)
 
+    workflow.add_node("classify_query", classify_query_agent)
+    workflow.add_node("general_response", general_conversation_agent)
     workflow.add_node("retrieve", retrieval_agent)
     workflow.add_node("retry_retrieve", retrieval_retry_agent)
     workflow.add_node("analyze_context", analysis_agent)
@@ -107,7 +122,16 @@ def create_rag_graph():
     workflow.add_node("retry_dispatch", lambda state: state)
     workflow.add_node("human_approval", human_approval_node)
 
-    workflow.set_entry_point("retrieve")
+    workflow.set_entry_point("classify_query")
+
+    workflow.add_conditional_edges(
+        "classify_query",
+        query_route_router,
+        {
+            "general": "general_response",
+            "document": "retrieve",
+        },
+    )
 
     workflow.add_conditional_edges(
         "retrieve",
@@ -115,6 +139,7 @@ def create_rag_graph():
         {
             "has_context": "route_by_task",
             "retry": "retry_retrieve",
+            "general_fallback": "general_response",
             "fallback": "fallback",
         },
     )
@@ -139,6 +164,7 @@ def create_rag_graph():
         analysis_router,
         {
             "generate": "generate_chat",
+            "general_fallback": "general_response",
             "fallback": "fallback",
         },
     )
@@ -171,6 +197,7 @@ def create_rag_graph():
     )
 
     workflow.add_edge("fallback", "human_approval")
+    workflow.add_edge("general_response", "human_approval")
     workflow.add_edge("human_approval", END)
 
     return workflow.compile()

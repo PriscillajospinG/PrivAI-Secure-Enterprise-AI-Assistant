@@ -154,6 +154,7 @@ async def query_assistant(request: QueryRequest):
     """Query the RAG pipeline with LangGraph orchestration."""
     initial_state = {
         "task_type": request.task_type.value,
+        "query_route": "document",
         "query": request.query,
         "top_k": request.top_k,
         "effective_top_k": request.top_k,

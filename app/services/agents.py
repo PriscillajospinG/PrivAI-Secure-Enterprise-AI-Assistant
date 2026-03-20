@@ -11,6 +11,37 @@ from app.services.document_service import get_relevant_documents
 
 llm = get_llm()
 
+GENERAL_QUERY_KEYWORDS = {
+    "hello",
+    "hi",
+    "hey",
+    "good morning",
+    "good afternoon",
+    "good evening",
+    "how are you",
+    "who are you",
+    "what can you do",
+    "thanks",
+    "thank you",
+}
+
+DOCUMENT_QUERY_HINTS = {
+    "policy",
+    "leave",
+    "reimbursement",
+    "contract",
+    "meeting",
+    "document",
+    "clause",
+    "compliance",
+    "hr",
+    "security",
+    "procedure",
+    "guideline",
+    "benefits",
+    "work hours",
+}
+
 
 def _extract_json_object(raw_text: str) -> dict[str, Any]:
     text = raw_text.strip()
@@ -67,6 +98,57 @@ def _compute_confidence(sources: list[dict[str, Any]], approved: bool) -> float:
     validation_factor = 1.0 if approved else 0.2
     confidence = (0.6 * retrieval_factor) + (0.25 * source_factor) + (0.15 * validation_factor)
     return round(max(0.0, min(1.0, confidence)), 2)
+
+
+def classify_query_agent(state: dict[str, Any]) -> dict[str, Any]:
+    """Classify whether query should use general chat path or document-grounded RAG."""
+    task_type = state.get("task_type", "chat")
+    if task_type in {"summarize", "analyze", "meeting"}:
+        return {"query_route": "document"}
+
+    query = " ".join(str(state.get("query", "")).lower().split())
+    if not query:
+        return {"query_route": "general"}
+
+    if any(keyword in query for keyword in GENERAL_QUERY_KEYWORDS):
+        return {"query_route": "general"}
+
+    if any(hint in query for hint in DOCUMENT_QUERY_HINTS):
+        return {"query_route": "document"}
+
+    # Simple heuristic: brief social questions should not go through RAG.
+    if len(query.split()) <= 4 and "?" not in query:
+        return {"query_route": "general"}
+
+    return {"query_route": "document"}
+
+
+def general_conversation_agent(state: dict[str, Any]) -> dict[str, Any]:
+    """Handle open-ended conversational queries without document retrieval."""
+    query = state.get("query", "")
+    prompt = f"""
+You are PrivAI, a friendly and professional enterprise AI assistant.
+The user is asking a general conversational query, not a document-grounded request.
+
+Guidelines:
+- Respond naturally and helpfully.
+- Keep the response concise and clear.
+- Use markdown when useful.
+- Do not mention retrieval context, chunks, or validation metadata.
+
+User Query: {query}
+"""
+    response_msg = llm.invoke([SystemMessage(content=prompt)])
+    return {
+        "response": response_msg.content,
+        "structured_output": None,
+        "sources": [],
+        "analysis_sufficient": True,
+        "validation_result": "APPROVED: general conversation route.",
+        "approved": True,
+        "confidence": 0.85,
+        "query_route": "general",
+    }
 
 
 def retrieval_agent(state: dict[str, Any]) -> dict[str, Any]:
