@@ -7,7 +7,8 @@ import {
     Users,
     Search,
     Settings,
-    Shield
+    Shield,
+    BarChart3,
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -45,8 +46,8 @@ const SidebarItem = ({ icon, label, active, onClick }: SidebarItemProps) => (
 );
 
 interface SidebarProps {
-    activeMode: TaskType | 'upload';
-    onModeChange: (mode: TaskType | 'upload') => void;
+    activeMode: TaskType | 'upload' | 'evaluation';
+    onModeChange: (mode: TaskType | 'upload' | 'evaluation') => void;
 }
 
 export const Sidebar = ({ activeMode, onModeChange }: SidebarProps) => {
@@ -103,6 +104,12 @@ export const Sidebar = ({ activeMode, onModeChange }: SidebarProps) => {
                     label="Document Manager"
                     active={activeMode === 'upload'}
                     onClick={() => onModeChange('upload')}
+                />
+                <SidebarItem
+                    icon={<BarChart3 size={20} />}
+                    label="Evaluation"
+                    active={activeMode === 'evaluation'}
+                    onClick={() => onModeChange('evaluation')}
                 />
             </nav>
 

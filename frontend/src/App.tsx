@@ -4,10 +4,13 @@ import { ChatPage } from './pages/ChatPage';
 import { UploadPage } from './pages/UploadPage';
 import { AnalysisPage } from './pages/AnalysisPage';
 import { SearchPage } from './pages/SearchPage';
+import { EvaluationPage } from './pages/EvaluationPage';
 import type { TaskType } from './services/api.service';
 
+type AppMode = TaskType | 'upload' | 'evaluation';
+
 const App: React.FC = () => {
-  const [activeMode, setActiveMode] = useState<TaskType | 'upload'>('chat');
+  const [activeMode, setActiveMode] = useState<AppMode>('chat');
 
   const renderContent = () => {
     switch (activeMode) {
@@ -17,6 +20,8 @@ const App: React.FC = () => {
         return <SearchPage />;
       case 'upload':
         return <UploadPage />;
+      case 'evaluation':
+        return <EvaluationPage />;
       case 'summarize':
       case 'analyze':
       case 'meeting':
