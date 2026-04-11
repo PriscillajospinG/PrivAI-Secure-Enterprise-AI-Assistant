@@ -63,7 +63,7 @@ def retrieval_outcome_router(state: AgentState) -> str:
         return "has_context"
     if attempts < settings.RETRIEVAL_RETRY_LIMIT:
         return "retry"
-    if state.get("task_type") in {"chat", "search"}:
+    if state.get("task_type") == "chat":
         return "general_fallback"
     return "fallback"
 
@@ -71,7 +71,7 @@ def retrieval_outcome_router(state: AgentState) -> str:
 def analysis_router(state: AgentState) -> str:
     if state.get("analysis_sufficient"):
         return "generate"
-    if state.get("task_type") in {"chat", "search"}:
+    if state.get("task_type") == "chat":
         return "general_fallback"
     return "fallback"
 

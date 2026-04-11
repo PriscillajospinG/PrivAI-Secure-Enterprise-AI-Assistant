@@ -186,9 +186,16 @@ def index_documents(file_paths: list[str] | None = None) -> dict:
     """Incrementally index only requested documents and avoid full rebuild."""
     os.makedirs(settings.DOCS_DIR, exist_ok=True)
 
-    paths = file_paths or _discover_documents()
+    paths = _discover_documents() if file_paths is None else list(file_paths)
     paths = [path for path in paths if Path(path).suffix.lower() in settings.allowed_extensions()]
     logger.info("Indexing pipeline started files=%s", len(paths))
+
+    if not paths:
+        return {
+            "indexed_chunks": 0,
+            "indexed_files": [],
+            "skipped_files": [],
+        }
 
     vector_store = get_vector_store()
     loaded_docs = load_documents(paths)
