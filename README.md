@@ -26,6 +26,46 @@ Runtime behavior:
 - General conversational queries are routed directly to the local LLM
 - Document-based queries are routed through RAG retrieval + validation
 
+### Architecture Diagram
+
+```mermaid
+flowchart LR
+   UI[React Frontend] --> API[FastAPI Backend]
+   API --> LG[LangGraph Orchestrator]
+   LG --> CLS[Query Classifier]
+   CLS -->|General| GEN[General LLM Agent]
+   CLS -->|Document| RET[Retrieval Service]
+   RET --> LC[LangChain]
+   LC --> CH[(ChromaDB)]
+   CH --> DOCS[(Local Documents)]
+   RET --> RER[Reranking Layer]
+   RER --> GQA[Grounded Generation]
+   GEN --> FMT[Response Formatter]
+   GQA --> VAL[Validation Service]
+   VAL --> FMT
+   FMT --> UI
+```
+
+### Workflow Diagram
+
+```mermaid
+flowchart TD
+   A[User Query] --> B[Classify Query]
+   B -->|General| C[Direct LLM Response]
+   B -->|Document| D[Retrieve Top-K Candidates]
+   D --> E[Hybrid Rerank]
+   E --> F{Context Sufficient?}
+   F -->|No| C
+   F -->|Yes| G[Grounded Generation]
+   G --> H[Grounding Validation]
+   H --> I{Approved?}
+   I -->|No| J[Retry or Fallback]
+   I -->|Yes| K[Format Answer + Sources + Confidence]
+   J --> K
+   C --> K
+   K --> L[API Response to UI]
+```
+
 ## Tech Stack
 
 - FastAPI
@@ -34,6 +74,11 @@ Runtime behavior:
 - ChromaDB
 - Ollama (Llama3)
 - React + TypeScript + Tailwind CSS
+
+Additional production/evaluation tooling:
+
+- Structured logging with rotating files
+- Evaluation pipeline with scikit-learn + matplotlib
 
 ## Project Structure
 
@@ -56,6 +101,7 @@ PrivAI-Secure-Enterprise-AI-Assistant/
 |  |- chroma/              # ChromaDB persisted vector index
 |
 |- scripts/                # Utility scripts (for example smoke tests)
+|  |- evaluate_system.py   # Accuracy/precision/recall/F1/latency evaluation
 |- requirements.txt        # Backend dependencies
 |- README.md
 ```
@@ -77,6 +123,12 @@ Note:
 6. Validation agent checks grounding and confidence
 7. Formatter produces structured output for frontend rendering
 8. User receives response with answer, confidence, validation status, and sources
+
+### Hybrid Logic Summary
+
+- General queries (hello, hi, conversational prompts) bypass retrieval and are answered directly by the local LLM.
+- Document queries (policy, contracts, compliance, meeting intelligence) use retrieval + reranking + strict grounding.
+- If retrieval is weak/empty for chat/search, the workflow falls back to general response mode.
 
 ## Installation and Setup
 
@@ -135,6 +187,24 @@ source venv/bin/activate
 python scripts/api_smoke_test.py --base-url http://127.0.0.1:8000
 ```
 
+### 6. Optional evaluation run (academic metrics)
+
+```bash
+source venv/bin/activate
+python scripts/evaluate_system.py \
+   --base-url http://127.0.0.1:8000 \
+   --dataset data/eval/sample_eval.jsonl \
+   --output-dir reports/evaluation
+```
+
+Generated artifacts:
+
+- `reports/evaluation/metrics.json`
+- `reports/evaluation/detailed_results.json`
+- `reports/evaluation/confusion_matrix.png`
+- `reports/evaluation/response_times.png`
+- `reports/evaluation/metrics_bar_chart.png`
+
 ## Usage
 
 1. Upload enterprise documents in the upload mode (txt/pdf)
@@ -143,6 +213,7 @@ python scripts/api_smoke_test.py --base-url http://127.0.0.1:8000
 4. Use summarize mode for concise document summaries
 5. Use analyze mode for contract/policy extraction
 6. Use meeting mode for transcript intelligence
+7. Use `/diagnostics` endpoint for system diagnostics and runtime telemetry
 
 ## Example Queries
 
@@ -173,9 +244,30 @@ Expected behavior:
 - Symptom: no grounded answers or empty retrieval context
 - Fix: upload documents and run indexing/reindex endpoint
 
+4. Port conflict on backend startup
+
+- Symptom: uvicorn fails to bind to port 8000
+- Fix: stop old process and restart (for example, `lsof -ti:8000 | xargs kill -9`)
+
+5. Virtual environment pip launcher mismatch
+
+- Symptom: `venv/bin/pip` points to stale interpreter after venv rename
+- Fix: use `venv/bin/python -m pip install -r requirements.txt`
+
+## Production Features Implemented
+
+- Corruption-safe Chroma initialization with automatic reset/rebuild fallback
+- Incremental indexing and deterministic chunk metadata
+- Hybrid query routing (general vs RAG)
+- Retrieval reranking (vector + lexical blend)
+- Validation + confidence scoring with retry/fallback logic
+- Structured markdown output formatting with deduplicated sources
+- Health and diagnostics endpoints (`/health`, `/diagnostics`)
+- Rotating file logging and runtime request telemetry
+
 ## Future Improvements
 
-- Better RAG ranking and reranking strategies
+- Advanced semantic reranking with dedicated cross-encoder model
 - Streaming responses for lower perceived latency
 - Authentication and enterprise SSO integration
 - Role-based access control for documents and actions
