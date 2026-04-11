@@ -4,10 +4,10 @@
   "recall": 1.0,
   "f1_score": 0.8571,
   "exact_match": 0.0,
-  "token_precision": 0.124,
-  "token_recall": 0.643,
-  "token_f1": 0.1982,
-  "response_time_ms_avg": 17570.55,
-  "response_time_ms_p95": 22373.0,
+  "token_precision": 0.1538,
+  "token_recall": 0.6018,
+  "token_f1": 0.2322,
+  "response_time_ms_avg": 22541.03,
+  "response_time_ms_p95": 28187.95,
   "samples": 4
 }
