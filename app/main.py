@@ -250,6 +250,9 @@ async def query_assistant(request: QueryRequest):
 
     approved = bool(result.get("approved", False))
     cleaned_sources = format_sources(result.get("sources", []))
+    no_data_response = str(response).strip().lower().startswith("no relevant data found")
+    if no_data_response:
+        cleaned_sources = []
     formatted_answer = format_answer(
         query=request.query,
         response=response,
@@ -269,7 +272,7 @@ async def query_assistant(request: QueryRequest):
             "confidence": float(result.get("confidence", 0.0)),
             "structured_output": result.get("structured_output"),
             "sources": cleaned_sources,
-            "context_preview": result.get("context", [])[:3],
+            "context_preview": [] if no_data_response else result.get("context", [])[:3],
         },
         metadata={
             "attempts": result.get("attempts", 0),
