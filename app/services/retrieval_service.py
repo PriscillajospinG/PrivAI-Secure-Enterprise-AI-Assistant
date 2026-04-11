@@ -4,6 +4,7 @@ from collections import Counter
 from typing import Any
 
 from app.core.config import settings
+from app.services.document_service import get_collection_count
 from app.services.document_service import get_relevant_documents
 
 _TOKEN_RE = re.compile(r"[a-zA-Z0-9_]+")
@@ -27,6 +28,9 @@ def _lexical_overlap_score(query: str, text: str) -> float:
 
 def retrieve_ranked_context(query: str, top_k: int) -> tuple[list[str], list[dict[str, Any]]]:
     candidate_k = max(top_k, top_k * settings.RETRIEVAL_CANDIDATE_MULTIPLIER)
+    collection_count = get_collection_count()
+    if collection_count > 0:
+        candidate_k = min(candidate_k, collection_count)
     docs_with_scores = get_relevant_documents(query=query, top_k=candidate_k)
 
     ranked_items: list[tuple[float, str, dict[str, Any]]] = []

@@ -178,9 +178,9 @@ def summarization_agent(state: dict[str, Any]) -> dict[str, Any]:
             "structured_output": structured,
         }
 
-        prompt = build_summary_prompt(context)
-        response_text = invoke_llm_with_retry(prompt, system=True)
-        parsed = _extract_json_object(response_text)
+    prompt = build_summary_prompt(context)
+    response_text = invoke_llm_with_retry(prompt, system=True)
+    parsed = _extract_json_object(response_text)
     structured = {
         "overview": _normalize_list(parsed.get("overview")),
         "key_points": _normalize_list(parsed.get("key_points")),

@@ -251,3 +251,11 @@ def get_store_stats() -> dict:
     except Exception:
         count = 0
     return {"collection": settings.COLLECTION_NAME, "document_chunks": count}
+
+
+def get_collection_count() -> int:
+    try:
+        vector_store = get_vector_store()
+        return int(vector_store._collection.count())  # noqa: SLF001
+    except Exception:
+        return 0
