@@ -3,6 +3,7 @@ import shutil
 import time
 from collections import defaultdict, deque
 from pathlib import Path
+import logging
 
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.concurrency import run_in_threadpool
@@ -11,15 +12,27 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.config import settings
+from app.core.logging_config import configure_logging
 from app.core.llm_factory import check_ollama_status
 from app.schemas.chat import ErrorResponse, QueryRequest, QueryResponse, UploadResponse
 from app.services.document_service import get_store_stats, index_documents
 from app.services.graph_service import rag_graph
 from app.services.response_formatter import format_answer, format_sources, format_validation_status
 
+configure_logging()
+logger = logging.getLogger(__name__)
+
 app = FastAPI(title=settings.PROJECT_NAME)
 
 _rate_limiter_state: dict[str, deque[float]] = defaultdict(deque)
+_runtime_stats = {
+    "start_time": time.time(),
+    "request_count": 0,
+    "error_count": 0,
+    "last_error": "",
+    "latency_ms": deque(maxlen=500),
+    "per_route": defaultdict(int),
+}
 
 # CORS configuration
 app.add_middleware(
@@ -37,6 +50,7 @@ os.makedirs(settings.CHROMA_DIR, exist_ok=True)
 
 @app.on_event("startup")
 async def startup_checks():
+    logger.info("Starting up application and validating dependencies")
     await run_in_threadpool(get_store_stats)
     check_ollama_status()
 
@@ -44,18 +58,28 @@ async def startup_checks():
 @app.middleware("http")
 async def simple_rate_limit(request: Request, call_next):
     client_ip = request.client.host if request.client else "unknown"
+    start = time.perf_counter()
     now = time.time()
     window_start = now - settings.RATE_LIMIT_WINDOW_SECONDS
     bucket = _rate_limiter_state[client_ip]
     while bucket and bucket[0] < window_start:
         bucket.popleft()
     if len(bucket) >= settings.RATE_LIMIT_REQUESTS:
+        _runtime_stats["error_count"] += 1
+        _runtime_stats["last_error"] = "rate_limited"
         return JSONResponse(
             status_code=429,
             content=ErrorResponse(success=False, error="rate_limited", detail="Too many requests").model_dump(),
         )
     bucket.append(now)
-    return await call_next(request)
+    response = await call_next(request)
+    duration_ms = round((time.perf_counter() - start) * 1000, 2)
+    _runtime_stats["request_count"] += 1
+    _runtime_stats["latency_ms"].append(duration_ms)
+    _runtime_stats["per_route"][request.url.path] += 1
+    if response.status_code >= 500:
+        _runtime_stats["error_count"] += 1
+    return response
 
 
 @app.exception_handler(RequestValidationError)
@@ -68,6 +92,9 @@ async def validation_exception_handler(_: Request, exc: RequestValidationError):
 
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(_: Request, exc: Exception):
+    logger.exception("Unhandled exception: %s", exc)
+    _runtime_stats["error_count"] += 1
+    _runtime_stats["last_error"] = str(exc)
     return JSONResponse(
         status_code=500,
         content=ErrorResponse(
@@ -100,6 +127,35 @@ async def health_check():
         "environment": settings.APP_ENV,
     }
 
+
+@app.get("/diagnostics")
+async def diagnostics():
+    ollama = check_ollama_status()
+    vector_stats = get_store_stats()
+    latencies = list(_runtime_stats["latency_ms"])
+    avg_latency = round(sum(latencies) / len(latencies), 2) if latencies else 0.0
+
+    return {
+        "status": "healthy" if ollama.get("available") else "degraded",
+        "uptime_seconds": round(time.time() - _runtime_stats["start_time"], 2),
+        "requests": {
+            "count": _runtime_stats["request_count"],
+            "errors": _runtime_stats["error_count"],
+            "avg_latency_ms": avg_latency,
+            "route_counts": dict(_runtime_stats["per_route"]),
+        },
+        "last_error": _runtime_stats["last_error"],
+        "ollama": ollama,
+        "vector_store": vector_stats,
+        "config": {
+            "retrieval_top_k": settings.RETRIEVAL_TOP_K,
+            "chunk_size": settings.CHUNK_SIZE,
+            "chunk_overlap": settings.CHUNK_OVERLAP,
+            "llm_model": settings.LLM_MODEL,
+            "embedding_model": settings.EMBEDDING_MODEL,
+        },
+    }
+
 @app.post("/upload", response_model=UploadResponse)
 async def upload_documents(files: list[UploadFile] = File(...)):
     """Upload documents and incrementally index supported files."""
@@ -122,6 +178,7 @@ async def upload_documents(files: list[UploadFile] = File(...)):
         stored_paths.append(file_path)
         uploaded_names.append(safe_name)
 
+    logger.info("Indexing %s uploaded files", len(stored_paths))
     result = await run_in_threadpool(index_documents, stored_paths)
 
     return UploadResponse(
@@ -138,6 +195,7 @@ async def upload_documents(files: list[UploadFile] = File(...)):
 @app.post("/reindex", response_model=UploadResponse)
 async def reindex_documents():
     """Re-index all supported documents in data/docs to refresh metadata."""
+    logger.info("Starting full reindex operation")
     result = await run_in_threadpool(index_documents, None)
     return UploadResponse(
         success=True,
@@ -171,6 +229,7 @@ async def query_assistant(request: QueryRequest):
         "should_regenerate": False,
     }
 
+    logger.info("Processing query task=%s query=%s", request.task_type.value, request.query[:120])
     result = await run_in_threadpool(rag_graph.invoke, initial_state)
 
     response = result.get("response")

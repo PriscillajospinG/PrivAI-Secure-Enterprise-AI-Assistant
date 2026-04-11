@@ -21,9 +21,13 @@ class Settings(BaseSettings):
     CHUNK_SIZE: int = 900
     CHUNK_OVERLAP: int = 150
     RETRIEVAL_TOP_K: int = 4
+    RETRIEVAL_CANDIDATE_MULTIPLIER: int = 3
+    RERANK_MIN_SCORE: float = 0.15
     RETRIEVAL_MIN_SOURCE_LENGTH: int = 50
     RETRIEVAL_RETRY_LIMIT: int = 1
     VALIDATION_RETRY_LIMIT: int = 1
+    LLM_RETRY_COUNT: int = 2
+    LLM_RETRY_BACKOFF_SECONDS: float = 0.6
 
     ALLOWED_FILE_EXTENSIONS: str = ".txt,.pdf"
     MAX_UPLOAD_FILES: int = 20
@@ -33,6 +37,9 @@ class Settings(BaseSettings):
 
     RATE_LIMIT_REQUESTS: int = 60
     RATE_LIMIT_WINDOW_SECONDS: int = 60
+
+    LOG_LEVEL: str = "INFO"
+    LOG_FILE: str = os.path.join(os.getcwd(), "logs", "app.log")
 
     def allowed_origins(self) -> list[str]:
         return [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",") if origin.strip()]
