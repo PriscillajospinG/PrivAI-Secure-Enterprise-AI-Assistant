@@ -196,8 +196,8 @@ def create_rag_graph():
         },
     )
 
-    workflow.add_edge("fallback", "human_approval")
-    workflow.add_edge("general_response", "human_approval")
+    workflow.add_edge("fallback", "validate")
+    workflow.add_edge("general_response", "validate")
     workflow.add_edge("human_approval", END)
 
     return workflow.compile()

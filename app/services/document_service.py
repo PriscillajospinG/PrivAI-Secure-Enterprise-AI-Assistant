@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Iterable
 
 import chromadb
+from chromadb.config import Settings as ChromaClientSettings
 from langchain_chroma import Chroma
 from langchain_community.document_loaders import PyPDFLoader, TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -143,7 +144,10 @@ def _build_chunk_ids(chunks) -> list[str]:
 def _create_vector_store() -> Chroma:
     embeddings = get_embeddings()
     os.makedirs(settings.CHROMA_DIR, exist_ok=True)
-    client = chromadb.PersistentClient(path=settings.CHROMA_DIR)
+    client = chromadb.PersistentClient(
+        path=settings.CHROMA_DIR,
+        settings=ChromaClientSettings(anonymized_telemetry=False),
+    )
     store = Chroma(
         client=client,
         collection_name=settings.COLLECTION_NAME,
@@ -184,6 +188,7 @@ def index_documents(file_paths: list[str] | None = None) -> dict:
 
     paths = file_paths or _discover_documents()
     paths = [path for path in paths if Path(path).suffix.lower() in settings.allowed_extensions()]
+    logger.info("Indexing pipeline started files=%s", len(paths))
 
     vector_store = get_vector_store()
     loaded_docs = load_documents(paths)
@@ -202,8 +207,8 @@ def index_documents(file_paths: list[str] | None = None) -> dict:
     for source_file in indexed_files:
         try:
             vector_store.delete(where={"source_file": source_file})
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Failed deleting previous chunks for source=%s: %s", source_file, exc)
 
     try:
         vector_store.add_documents(chunks, ids=ids)

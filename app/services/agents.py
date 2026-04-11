@@ -1,4 +1,5 @@
 import json
+import logging
 from typing import Any
 
 from app.core.config import settings
@@ -13,6 +14,8 @@ from app.services.generation_service import (
 )
 from app.services.retrieval_service import retrieve_ranked_context
 from app.services.validation_service import compute_confidence
+
+logger = logging.getLogger(__name__)
 
 GENERAL_QUERY_KEYWORDS = {
     "hello",
@@ -97,7 +100,7 @@ def _default_structured_output(task_type: str) -> dict[str, Any]:
 def classify_query_agent(state: dict[str, Any]) -> dict[str, Any]:
     """Classify whether query should use general chat path or document-grounded RAG."""
     task_type = state.get("task_type", "chat")
-    if task_type in {"summarize", "analyze", "meeting"}:
+    if task_type in {"search", "summarize", "analyze", "meeting"}:
         return {"query_route": "document"}
 
     query = " ".join(str(state.get("query", "")).lower().split())
@@ -122,6 +125,7 @@ def general_conversation_agent(state: dict[str, Any]) -> dict[str, Any]:
     query = state.get("query", "")
     prompt = build_general_prompt(query)
     response_text = invoke_llm_with_retry(prompt, system=True)
+    logger.info("General conversation route selected")
     return {
         "response": response_text,
         "structured_output": None,
@@ -139,6 +143,7 @@ def retrieval_agent(state: dict[str, Any]) -> dict[str, Any]:
     query = state["query"]
     top_k = state.get("effective_top_k", state.get("top_k", settings.RETRIEVAL_TOP_K))
     context, sources = retrieve_ranked_context(query=query, top_k=top_k)
+    logger.info("Retrieved %s context chunks (top_k=%s)", len(context), top_k)
     return {"context": context, "sources": sources}
 
 
@@ -165,6 +170,7 @@ def generation_agent(state: dict[str, Any]) -> dict[str, Any]:
     context = "\n\n".join(state.get("context", []))
     prompt = build_grounded_qa_prompt(query=query, context=context)
     response_text = invoke_llm_with_retry(prompt, system=False)
+    logger.info("Generated grounded response")
     return {"response": response_text, "structured_output": None}
 
 
@@ -199,6 +205,7 @@ def summarization_agent(state: dict[str, Any]) -> dict[str, Any]:
             *[f"- {item}" for item in structured["highlights"]],
         ]
     )
+    logger.info("Generated summarization output")
     return {"response": response, "structured_output": structured}
 
 
@@ -220,6 +227,8 @@ def extraction_agent(state: dict[str, Any]) -> dict[str, Any]:
     for key in required_keys:
         structured[key] = _normalize_list(parsed.get(key))
 
+    logger.info("Generated structured extraction for task=%s", task_type)
+
     return {
         "response": build_structured_response(structured),
         "structured_output": structured,
@@ -228,7 +237,8 @@ def extraction_agent(state: dict[str, Any]) -> dict[str, Any]:
 
 def fallback_agent(state: dict[str, Any]) -> dict[str, Any]:
     task_type = state.get("task_type", "chat")
-    fallback_text = "Information not found in provided context."
+    fallback_text = "No relevant data found."
+    logger.warning("Fallback agent triggered for task=%s", task_type)
     return {
         "response": fallback_text,
         "structured_output": _default_structured_output(task_type) if task_type in {"summarize", "analyze", "meeting"} else None,
@@ -245,10 +255,28 @@ def validation_agent(state: dict[str, Any]) -> dict[str, Any]:
     context = "\n\n".join(state.get("context", []))
     task_type = state.get("task_type", "chat")
 
+    # General-route and deterministic fallback validation should not call validator LLM.
+    if state.get("query_route") == "general":
+        return {
+            "validation_result": "APPROVED: general conversation route.",
+            "approved": True,
+            "confidence": float(state.get("confidence", 0.85)),
+            "should_regenerate": False,
+        }
+
+    if response.strip().lower() in {"no relevant data found.", "information not found in provided context."}:
+        return {
+            "validation_result": "APPROVED: no relevant grounded context available.",
+            "approved": True,
+            "confidence": 0.0,
+            "should_regenerate": False,
+        }
+
     prompt = build_validation_prompt(query=query, context=context, answer=response, task_type=task_type)
     verdict = invoke_llm_with_retry(prompt, system=True).strip()
     approved = verdict.upper().startswith("APPROVED")
     confidence = compute_confidence(state.get("sources", []), approved)
+    logger.info("Validation completed approved=%s confidence=%.2f", approved, confidence)
 
     return {
         "validation_result": verdict,

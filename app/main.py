@@ -179,7 +179,11 @@ async def upload_documents(files: list[UploadFile] = File(...)):
         uploaded_names.append(safe_name)
 
     logger.info("Indexing %s uploaded files", len(stored_paths))
-    result = await run_in_threadpool(index_documents, stored_paths)
+    try:
+        result = await run_in_threadpool(index_documents, stored_paths)
+    except Exception as exc:
+        logger.exception("Upload indexing failed: %s", exc)
+        raise HTTPException(status_code=503, detail="Document indexing failed. Please retry or run reindex.") from exc
 
     return UploadResponse(
         success=True,
@@ -196,7 +200,11 @@ async def upload_documents(files: list[UploadFile] = File(...)):
 async def reindex_documents():
     """Re-index all supported documents in data/docs to refresh metadata."""
     logger.info("Starting full reindex operation")
-    result = await run_in_threadpool(index_documents, None)
+    try:
+        result = await run_in_threadpool(index_documents, None)
+    except Exception as exc:
+        logger.exception("Reindex failed: %s", exc)
+        raise HTTPException(status_code=503, detail="Reindex failed due to vector store error.") from exc
     return UploadResponse(
         success=True,
         result={
@@ -230,11 +238,15 @@ async def query_assistant(request: QueryRequest):
     }
 
     logger.info("Processing query task=%s query=%s", request.task_type.value, request.query[:120])
-    result = await run_in_threadpool(rag_graph.invoke, initial_state)
+    try:
+        result = await run_in_threadpool(rag_graph.invoke, initial_state)
+    except Exception as exc:
+        logger.exception("Query workflow failed: %s", exc)
+        raise HTTPException(status_code=503, detail="Query processing failed. Please try again.") from exc
 
     response = result.get("response")
     if not response:
-        raise HTTPException(status_code=404, detail="Assistant could not find relevant information.")
+        raise HTTPException(status_code=404, detail="No relevant data found.")
 
     approved = bool(result.get("approved", False))
     cleaned_sources = format_sources(result.get("sources", []))
