@@ -1,0 +1,4 @@
+{"query":"What is the leave policy?","task_type":"chat","expected_answer":"Employees are entitled to annual, sick, and earned leave as defined in the company policy documents.","expected_grounded":1}
+{"query":"Summarize the meeting transcript","task_type":"meeting","expected_answer":"The meeting summary should include decisions, action items, and blockers from the transcript.","expected_grounded":1}
+{"query":"hello","task_type":"chat","expected_answer":"Hello! How can I assist you today?","expected_grounded":1}
+{"query":"What is our moon base policy?","task_type":"chat","expected_answer":"Information not found in provided context.","expected_grounded":0}
