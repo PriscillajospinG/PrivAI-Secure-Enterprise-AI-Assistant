@@ -242,6 +242,8 @@ def fallback_agent(state: dict[str, Any]) -> dict[str, Any]:
     return {
         "response": fallback_text,
         "structured_output": _default_structured_output(task_type) if task_type in {"summarize", "analyze", "meeting"} else None,
+        "sources": [],
+        "context": [],
         "validation_result": "APPROVED: deterministic fallback due to missing retrieval context.",
         "approved": True,
         "confidence": 0.0,

@@ -28,3 +28,6 @@ def configure_logging() -> None:
 
     root_logger.addHandler(stream_handler)
     root_logger.addHandler(file_handler)
+
+    # Suppress third-party telemetry noise that does not affect runtime behavior.
+    logging.getLogger("chromadb.telemetry.product.posthog").setLevel(logging.CRITICAL)
