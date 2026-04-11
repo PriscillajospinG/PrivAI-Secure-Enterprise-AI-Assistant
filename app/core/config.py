@@ -40,6 +40,10 @@ class Settings(BaseSettings):
 
     LOG_LEVEL: str = "INFO"
     LOG_FILE: str = os.path.join(os.getcwd(), "logs", "app.log")
+    QUERY_CACHE_TTL_SECONDS: int = 180
+    QUERY_CACHE_MAX_ENTRIES: int = 256
+    EVALUATION_DATASET_PATH: str = os.path.join(os.getcwd(), "data", "eval", "sample_eval.jsonl")
+    EVALUATION_REPORT_DIR: str = os.path.join(os.getcwd(), "reports", "evaluation")
 
     def allowed_origins(self) -> list[str]:
         return [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",") if origin.strip()]
