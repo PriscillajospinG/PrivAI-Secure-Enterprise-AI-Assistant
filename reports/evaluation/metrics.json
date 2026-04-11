@@ -1,0 +1,13 @@
+{
+  "accuracy": 0.75,
+  "precision": 0.75,
+  "recall": 1.0,
+  "f1_score": 0.8571,
+  "exact_match": 0.0,
+  "token_precision": 0.2266,
+  "token_recall": 0.8753,
+  "token_f1": 0.3441,
+  "response_time_ms_avg": 20670.46,
+  "response_time_ms_p95": 28309.32,
+  "samples": 4
+}

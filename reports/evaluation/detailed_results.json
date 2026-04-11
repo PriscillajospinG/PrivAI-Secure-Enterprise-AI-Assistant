@@ -1,0 +1,50 @@
+[
+  {
+    "index": 0,
+    "query": "What is the leave policy?",
+    "task_type": "chat",
+    "expected_grounded": 1,
+    "predicted_grounded": 1,
+    "token_precision": 0.1077,
+    "token_recall": 0.875,
+    "token_f1": 0.1918,
+    "exact_match": 0,
+    "response_time_ms": 28814.46
+  },
+  {
+    "index": 1,
+    "query": "Summarize the meeting transcript",
+    "task_type": "meeting",
+    "expected_grounded": 1,
+    "predicted_grounded": 1,
+    "token_precision": 0.1149,
+    "token_recall": 0.7692,
+    "token_f1": 0.2,
+    "exact_match": 0,
+    "response_time_ms": 22684.6
+  },
+  {
+    "index": 2,
+    "query": "hello",
+    "task_type": "chat",
+    "expected_grounded": 1,
+    "predicted_grounded": 1,
+    "token_precision": 0.2222,
+    "token_recall": 0.8571,
+    "token_f1": 0.3529,
+    "exact_match": 0,
+    "response_time_ms": 2873.45
+  },
+  {
+    "index": 3,
+    "query": "What is our moon base policy?",
+    "task_type": "chat",
+    "expected_grounded": 0,
+    "predicted_grounded": 1,
+    "token_precision": 0.4615,
+    "token_recall": 1.0,
+    "token_f1": 0.6316,
+    "exact_match": 0,
+    "response_time_ms": 28309.32
+  }
+]
