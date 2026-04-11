@@ -5,11 +5,11 @@
     "task_type": "chat",
     "expected_grounded": 1,
     "predicted_grounded": 1,
-    "token_precision": 0.1077,
-    "token_recall": 0.875,
-    "token_f1": 0.1918,
+    "token_precision": 0.1111,
+    "token_recall": 0.625,
+    "token_f1": 0.1887,
     "exact_match": 0,
-    "response_time_ms": 28814.46
+    "response_time_ms": 22373.0
   },
   {
     "index": 1,
@@ -17,11 +17,11 @@
     "task_type": "meeting",
     "expected_grounded": 1,
     "predicted_grounded": 1,
-    "token_precision": 0.1149,
-    "token_recall": 0.7692,
-    "token_f1": 0.2,
+    "token_precision": 0.0719,
+    "token_recall": 0.9231,
+    "token_f1": 0.1333,
     "exact_match": 0,
-    "response_time_ms": 22684.6
+    "response_time_ms": 26350.54
   },
   {
     "index": 2,
@@ -33,7 +33,7 @@
     "token_recall": 0.8571,
     "token_f1": 0.3529,
     "exact_match": 0,
-    "response_time_ms": 2873.45
+    "response_time_ms": 2619.99
   },
   {
     "index": 3,
@@ -41,10 +41,10 @@
     "task_type": "chat",
     "expected_grounded": 0,
     "predicted_grounded": 1,
-    "token_precision": 0.4615,
-    "token_recall": 1.0,
-    "token_f1": 0.6316,
+    "token_precision": 0.0909,
+    "token_recall": 0.1667,
+    "token_f1": 0.1176,
     "exact_match": 0,
-    "response_time_ms": 28309.32
+    "response_time_ms": 18938.66
   }
 ]
